@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santana Cinema - Producción Audiovisual v1.2</title>
+    <link rel="icon" type="image/png" href="https://drive.google.com/thumbnail?id=1SQUDGhNCerUMNhzyO0JcX8uqcu6JYXJe&sz=w100">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --verde-claro: #34d399;
+            --verde-medio: #10b981;
+            --verde-oscuro: #059669;
+        }
+
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, .label-ubuntu { font-family: 'Ubuntu', sans-serif; }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes taskIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-item { 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+            animation: taskIn 0.3s ease-out backwards; 
+            position: relative; 
+            background: rgba(255,255,255,0.05);
+            color: #f1f5f9;
+        }
+        .task-item:hover { background: rgba(16, 185, 129, 0.1); }
+        .task-item:active { cursor: grabbing; }
+        .dragging { opacity: 0.5; transform: scale(0.98); }
+
+        .drop-target { 
+            border: 2px dashed var(--verde-medio) !important; 
+            background: rgba(16, 185, 129, 0.05) !important; 
+        }
+
+        .checkbox-eonesia {
+            appearance: none; width: 1.4rem; height: 1.4rem; border: 2px solid #cbd5e1; border-radius: 8px; cursor: pointer; position: relative; transition: all 0.3s ease; background: transparent; flex-shrink: 0;
+        }
+        .checkbox-eonesia:checked { background: linear-gradient(45deg, var(--verde-claro), var(--verde-oscuro)); border-color: transparent; }
+        .checkbox-eonesia:checked::after { content: '✓'; position: absolute; color: white; font-size: 0.9rem; font-weight: bold; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+        .star-rating { display: flex; align-items: center; gap: 4px; padding: 2px 8px; background: rgba(15, 23, 42, 0.6); border-radius: 10px; flex-shrink: 0; }
+        .star-icon { cursor: pointer; font-size: 16px; transition: all 0.2s; color: #475569; }
+        .star-icon.active { color: #f59e0b !important; text-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+        .star-icon:hover { transform: scale(1.2); color: #fbbf24; }
+
+        .progress-gradient { background: linear-gradient(90deg, #6ee7b7, #34d399, #10b981, #059669); }
+
+        #task-modal-overlay, #ref-picker-overlay { 
+            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); 
+            display: none; position: fixed; inset: 0; z-index: 1500; 
+            align-items: center; justify-content: center; padding: 20px; 
+        }
+
+        /* --- SIDEBAR --- */
+        #eonesia-sidebar {
+            position: fixed; left: 20px; top: 50%; transform: translateY(-50%); width: 64px; z-index: 2000; display: flex; flex-direction: column; gap: 16px; transition: width 0.4s;
+        }
+        #eonesia-sidebar.expanded { width: 220px; }
+        .sidebar-panel {
+            background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 32px; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #eonesia-sidebar.expanded .sidebar-panel { align-items: flex-start; padding-left: 14px; }
+        .sidebar-item {
+            display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 24px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s ease; color: #94a3b8; width: 100%; justify-content: center; position: relative;
+        }
+        #eonesia-sidebar.expanded .sidebar-item { justify-content: flex-start; width: 190px; }
+        .sidebar-item:hover { background: rgba(16, 185, 129, 0.15); color: var(--verde-claro); }
+        .sidebar-item-icon { font-size: 1.3rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .sidebar-label { opacity: 0; display: none; font-weight: 600; font-size: 14px; color: #cbd5e1; white-space: nowrap; }
+        #eonesia-sidebar.expanded .sidebar-label { opacity: 1; display: block; }
+        .sidebar-toggle {
+            position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 44px; display: flex; align-items: center; justify-content: center; background: #334155; border-radius: 8px; border: 1px solid #475569; cursor: pointer; transition: all 0.3s ease; z-index: 10; color: white;
+        }
+        #eonesia-sidebar.expanded .sidebar-toggle { right: 8px; }
+
+        /* --- MOODBOARD PANEL --- */
+        #moodboard-panel {
+            position: fixed; left: -400px; top: 0; bottom: 0; width: 350px; z-index: 1100;
+            background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.1);
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        }
+        #moodboard-panel.active { left: 90px; } 
+        @media (max-width: 768px) { #moodboard-panel.active { left: 80px; width: calc(100% - 80px); } }
+
+        /* --- PODIO DE RODAJE --- */
+        .podium-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; margin-bottom: 2rem; }
+        .podium-card { flex: 1; width: 100%; background: #1e293b; border-radius: 2rem; padding: 1.5rem; position: relative; transition: all 0.4s; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.5); border: 2px solid transparent; display: flex; flex-direction: column; cursor: pointer; }
+        @media (min-width: 768px) {
+            .podium-container { flex-direction: row; align-items: flex-end; justify-content: center; min-height: 320px; }
+            .podium-card { max-width: 320px; cursor: grab; }
+            .podium-rank-0 { order: 2; z-index: 10; transform: translateY(-20px); border-color: var(--verde-medio); box-shadow: 0 20px 40px -5px rgba(16,185,129,0.2); min-height: 300px; }
+            .podium-rank-1 { order: 1; z-index: 5; opacity: 0.9; min-height: 250px; }
+            .podium-rank-2 { order: 3; z-index: 5; opacity: 0.9; min-height: 230px; }
+            .podium-rank-0:hover { transform: translateY(-30px) scale(1.02); z-index: 20;}
+            .podium-rank-1:hover, .podium-rank-2:hover { transform: scale(1.03); opacity: 1; z-index: 20; border-color: #475569; }
+        }
+        .podium-medal { position: absolute; top: -1.25rem; left: 50%; transform: translateX(-50%); width: 2.5rem; height: 2.5rem; background: #0f172a; color: white; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; border: 4px solid #1e293b; z-index: 15; }
+        .podium-rank-0 .podium-medal { background: var(--verde-medio); border-color: #0f172a; transform: translateX(-50%) scale(1.2); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    </style>
+</head>
+<body class="pb-64 pt-24">
+
+    <aside id="eonesia-sidebar">
+        <div class="sidebar-panel relative">
+            <div class="sidebar-toggle" onclick="toggleSidebar()" title="Desplegar Menú">
+                <svg id="toggle-icon" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/></svg>
+            </div>
+            
+            <div class="sidebar-item !text-fuchsia-400 hover:!bg-fuchsia-900/40" onclick="toggleMoodboardPanel()" title="Moodboard & Visuales">
+                <div class="sidebar-item-icon">🎨</div>
+                <span class="sidebar-label">Moodboard</span>
+            </div>
+
+            <div class="sidebar-item !text-emerald-500 hover:!bg-emerald-900/40 mt-4" onclick="exportProject()" title="Exportar Proyecto a JSON">
+                <div class="sidebar-item-icon">💾</div>
+                <span class="sidebar-label">Guardar Proyecto</span>
+            </div>
+
+            <div class="sidebar-item" onclick="document.getElementById('import-file').click()" title="Cargar Proyecto JSON">
+                <div class="sidebar-item-icon">📁</div>
+                <span class="sidebar-label">Cargar Proyecto</span>
+                <input type="file" id="import-file" style="display:none" accept=".json" onchange="importProject(event)">
+            </div>
+        </div>
+    </aside>
+
+    <!-- PANEL LATERAL MOODBOARD -->
+    <div id="moodboard-panel">
+        <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+            <h3 class="text-white font-bold flex items-center gap-2 text-lg">
+                <span class="text-fuchsia-500">🎨</span> Moodboard Global
+            </h3>
+            <button onclick="toggleMoodboardPanel()" class="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+        </div>
+        <div class="p-5 border-b border-slate-700 bg-slate-900/50">
+            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-2 block">Vía Enlace / URL</label>
+            <div class="flex gap-2 mb-4">
+                <input type="url" id="mb-url-input" placeholder="https://..." class="flex-1 bg-slate-800 p-2 rounded-xl text-xs text-white border border-slate-700 outline-none focus:border-fuchsia-500">
+                <button onclick="addMoodboardUrl()" class="bg-fuchsia-600 text-white px-3 rounded-xl text-xs font-bold hover:bg-fuchsia-500 transition-colors">+</button>
+            </div>
+            
+            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-2 block border-t border-slate-700 pt-3">Vía Archivo Local</label>
+            <input type="file" id="mb-file-input" accept="image/*" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 cursor-pointer" onchange="addMoodboardFile(event)">
+        </div>
+        
+        <div id="moodboard-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 content-start">
+            <!-- Las imágenes se renderizan aquí -->
+        </div>
+    </div>
+
+    <!-- MODAL SELECCIONAR REFERENCIA -->
+    <div id="ref-picker-overlay" onclick="closeRefPicker(event)">
+        <div class="glass-panel w-full max-w-3xl bg-[#1e293b] p-8 rounded-[2rem] border border-slate-600 max-h-[80vh] flex flex-col" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white tracking-tighter">Vincular Referencia Visual</h3>
+                <button onclick="closeRefPicker()" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+            <div id="ref-picker-grid" class="grid grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto flex-1 p-2"></div>
+        </div>
+    </div>
+
+    <header class="fixed top-0 left-0 w-full z-50 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10">
+        <div class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-end">
+            <div class="flex-1">
+                <div class="flex justify-between mb-1 pr-4">
+                    <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest italic">Estado del Rodaje</span>
+                    <span id="progress-text-top" class="text-xs font-black text-emerald-400">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="progress-bar-top" class="progress-gradient h-full transition-all duration-700"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div>
+                <h1 class="text-5xl font-black tracking-tighter italic text-white">Santana <span class="text-emerald-500">Cinema</span></h1>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 italic">Gestor de Rodaje & Storyboards Visuales</p>
+            </div>
+            <div class="flex gap-3">
+                <input type="text" id="global-search" oninput="handleSearch()" placeholder="Buscar plano o secuencia..." class="glass-panel px-6 py-3 rounded-2xl text-sm border-none shadow-sm w-48 focus:w-64 transition-all text-white outline-none">
+            </div>
+        </div>
+
+        <section id="priority-hub" class="mb-12" ondragover="handleDragOver(event)" ondrop="handleDropToPriority(event)">
+            <h2 class="text-xl font-black italic mb-4 uppercase tracking-tighter text-emerald-400">Plan de Rodaje Principal (Prioridad)</h2>
+            <div id="priority-podium" class="podium-container"></div>
+            <div id="priority-empty-msg" class="p-8 text-center border-2 border-dashed border-slate-600 rounded-3xl text-slate-500 text-[10px] uppercase font-bold tracking-widest italic mt-4">No hay planos urgentes asignados para hoy.</div>
+        </section>
+
+        <div id="task-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16"></div>
+
+        <div id="new-section-box" class="glass-panel p-8 rounded-[2.5rem] border-2 border-dashed border-slate-600 text-center mb-20">
+            <div class="flex flex-col md:flex-row gap-4 max-w-md mx-auto">
+                <input type="text" id="new-section-title" placeholder="Ej: Secuencia 1 - Interior Día..." onkeypress="if(event.key==='Enter') addNewSection()" class="flex-1 px-5 py-3 rounded-xl border-none shadow-sm text-sm font-bold italic bg-slate-800 text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                <button onclick="addNewSection()" class="bg-emerald-600 text-white px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-colors">Añadir Secuencia</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- CAJA NEGRA: DETALLES DEL PLANO Y STORYBOARD -->
+    <div id="task-modal-overlay" onclick="closeTaskModal(event)">
+        <div class="glass-panel w-full max-w-5xl rounded-[2.5rem] p-10 animate-taskIn relative max-h-[95vh] overflow-y-auto bg-[#1e293b] border border-slate-600" onclick="event.stopPropagation()">
+            
+            <div class="flex justify-between items-start mb-6 border-b border-slate-700 pb-4">
+                <div class="flex-1">
+                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-[0.3em]" id="modal-sec-title">Detalles del Plano</span>
+                    <input type="text" id="modal-task-title" oninput="autoSave()" class="w-full bg-transparent mt-1 text-3xl font-bold tracking-tighter text-white outline-none border-b border-transparent focus:border-emerald-500" placeholder="Ej: Plano General de Establecimiento...">
+                </div>
+                <button onclick="hideTaskModal()" class="text-slate-400 hover:text-white text-3xl ml-4">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Columna Izquierda: Detalles Técnicos -->
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1 block">Cámara Principal</label>
+                            <input type="text" id="modal-camera" oninput="autoSave()" class="w-full bg-slate-800 p-4 rounded-xl text-xs font-bold border-none shadow-inner text-white focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="Ej: Sony FX3 / a6600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1 block">Lente / Óptica</label>
+                            <input type="text" id="modal-lens" oninput="autoSave()" class="w-full bg-slate-800 p-4 rounded-xl text-xs font-bold border-none shadow-inner text-white focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="Ej: Sony FE 90mm f/2.8 Macro">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1 block">Anotaciones Técnicas y de Luz</label>
+                        <textarea id="modal-task-notes" oninput="autoSave()" rows="3" class="w-full bg-slate-800 p-4 rounded-xl text-sm border-none resize-none shadow-inner text-white focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="Ej: Luz lateral dura, humo en el fondo..."></textarea>
+                    </div>
+
+                    <div class="bg-slate-800/50 p-6 rounded-[2rem] border border-slate-700 flex flex-col shadow-inner">
+                        <h4 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Checklist del Plano</h4>
+                        <input type="text" id="new-subtask-input" onkeydown="if(event.key==='Enter') addSubtask()" class="w-full bg-slate-900 p-4 rounded-xl text-xs font-bold border border-slate-700 mb-4 outline-none focus:border-emerald-400 text-white" placeholder="Ej: Grabar sonido ambiente (Wildtrack)...">
+                        <div id="subtasks-list" class="space-y-2 flex-1 overflow-y-auto"></div>
+                    </div>
+                </div>
+                
+                <!-- Columna Derecha: Dirección de Arte & Visuales -->
+                <div class="bg-slate-900 p-6 rounded-[2rem] border border-fuchsia-500/30 flex flex-col relative overflow-hidden shadow-2xl">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                        <svg class="w-24 h-24 text-fuchsia-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4zm2 4v10h12V8H6zm2 2h8v6H8v-6z"/></svg>
+                    </div>
+                    
+                    <h4 class="text-xs font-black text-fuchsia-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <span>🎨</span> Dirección de Arte & Visuales
+                    </h4>
+                    
+                    <!-- Sección de Referencias Manuales -->
+                    <div class="mb-6 z-10">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest">Referencias Vinculadas (Moodboard)</label>
+                            <button onclick="openRefPicker('task')" class="text-[9px] text-fuchsia-400 hover:text-fuchsia-300 font-bold uppercase border border-fuchsia-500/50 px-2 py-1 rounded-md bg-fuchsia-900/30 transition-colors">+ Añadir</button>
+                        </div>
+                        <div id="modal-references-list" class="flex gap-3 overflow-x-auto pb-2 min-h-[80px] bg-slate-800/50 p-3 rounded-xl border border-slate-700 items-center">
+                            <!-- Thumbnails de referencias -->
+                        </div>
+                    </div>
+
+                    <!-- Sección de Storyboard IA -->
+                    <div class="border-t border-slate-700 pt-5 z-10">
+                        <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-2 flex items-center justify-between">
+                            <span>Generador Storyboard (IA)</span>
+                        </label>
+                        <textarea id="modal-prompt" oninput="autoSave()" rows="2" class="w-full bg-slate-800 p-3 rounded-xl text-xs border border-slate-700 resize-none text-emerald-50 focus:ring-2 focus:ring-fuchsia-500 outline-none mb-3" placeholder="Ej: Primer plano macro de una mariposa Morpho peleides posándose sobre una hoja húmeda, iluminación cinemática..."></textarea>
+                        
+                        <button onclick="simulateAIGeneration()" class="w-full bg-fuchsia-600/20 text-fuchsia-400 border border-fuchsia-500/50 p-3 rounded-xl font-bold text-[10px] uppercase tracking-widest mb-4 hover:bg-fuchsia-600 hover:text-white transition-all">Generar Previsualización</button>
+
+                        <div id="storyboard-preview-container" class="flex-1 w-full min-h-[160px] bg-black/50 rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden mb-3 relative">
+                            <img id="storyboard-img" src="" class="w-full h-full object-cover hidden" alt="Storyboard">
+                            <span id="storyboard-placeholder" class="text-slate-500 text-xs italic">Sin imagen generada</span>
+                            <div id="storyboard-loading" class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center hidden">
+                                <div class="w-8 h-8 border-4 border-fuchsia-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                                <span class="text-fuchsia-400 text-[10px] font-bold tracking-widest uppercase">Renderizando...</span>
+                            </div>
+                        </div>
+
+                        <label class="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-1 block">URL de Storyboard Externo</label>
+                        <input type="url" id="modal-image-url" oninput="updateStoryboardPreview(); autoSave()" class="w-full bg-slate-800 p-3 rounded-xl text-[10px] border border-slate-700 text-slate-300 outline-none focus:border-fuchsia-500" placeholder="Pega aquí la URL de la imagen si ya la tienes...">
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="hideTaskModal()" class="w-full bg-emerald-600 text-white p-4 rounded-xl font-bold text-[10px] uppercase tracking-widest mt-6 hover:bg-emerald-500 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]">Guardar y Cerrar Plano</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ESTADO INICIAL ORIENTADO A PRODUCCIÓN ---
+        let sections = JSON.parse(localStorage.getItem('donnaCineSections')) || [
+            {
+                id: "sec-1", title: "Secuencia 1 - Expedición Selva (Ecuador)", icon: "🌴", pinned: true,
+                references: [],
+                tasks: [
+                    { id: 101, text: "Plano General: Dosel del bosque lluvioso", stars: 5, notes: "Usar dron si el clima lo permite.", lens: "Sony 100-400mm GM", camera: "Sony FX3", prompt: "Aerial view of lush green cloud forest canopy in Mindo Ecuador, morning mist, cinematic lighting, national geographic style", imageUrl: "", subtasks: [{text: "Verificar baterías del dron", completed: false}], references: [] },
+                    { id: 102, text: "Macro: Morpho peleides abriendo alas", stars: 4, notes: "Foco crítico. Esperar a que la temperatura suba.", lens: "Sony FE 90mm f/2.8 Macro", camera: "Sony a6600", prompt: "Extreme macro shot of brilliant blue Morpho peleides butterfly resting on a wet dark green leaf, shallow depth of field, 8k resolution", imageUrl: "", subtasks: [{text: "Montar trípode bajo", completed: true}], references: [] }
+                ]
+            }
+        ];
+        let completedTasks = JSON.parse(localStorage.getItem('donnaCineCompleted')) || [];
+        let priorityOrder = JSON.parse(localStorage.getItem('donnaCinePriority')) || [101, 102];
+        let moodboard = JSON.parse(localStorage.getItem('donnaCineMoodboard')) || [];
+        
+        let currentEditingTaskId = null;
+        let currentRefTarget = { type: null, id: null };
+        let isDragging = false;
+        let searchTerm = "";
+
+        const generateTaskId = () => Date.now() + Math.random();
+        const generateSecId = () => "sec-" + Date.now();
+
+        function saveState() { 
+            localStorage.setItem('donnaCineSections', JSON.stringify(sections)); 
+            localStorage.setItem('donnaCineCompleted', JSON.stringify(completedTasks)); 
+            localStorage.setItem('donnaCinePriority', JSON.stringify(priorityOrder)); 
+            localStorage.setItem('donnaCineMoodboard', JSON.stringify(moodboard));
+            updateProgress(); 
+        }
+
+        function findTaskById(id) { 
+            const taskId = parseFloat(id);
+            for (let s of sections) { 
+                if (s.tasks) { 
+                    const t = s.tasks.find(task => parseFloat(task.id) === taskId); 
+                    if (t) return { ...t, sectionIcon: s.icon, sectionTitle: s.title }; 
+                } 
+            } return null; 
+        }
+
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('eonesia-sidebar');
+            sidebar.classList.toggle('expanded');
+            document.getElementById('toggle-icon').style.transform = sidebar.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        function updateProgress() {
+            const total = sections.reduce((acc, s) => acc + (s.tasks ? s.tasks.length : 0), 0);
+            const globalP = total === 0 ? 0 : Math.round((completedTasks.length / total) * 100);
+            document.getElementById('progress-bar-top').style.width = `${globalP}%`; 
+            document.getElementById('progress-text-top').innerText = `${globalP}%`;
+        }
+
+        function renderStars(id, stars) { 
+            let h = '<div class="star-rating" title="Calidad del plano para montaje">'; 
+            for (let i = 1; i <= 5; i++) { 
+                const activeClass = i <= (stars || 0) ? 'active' : '';
+                h += `<span class="star-icon ${activeClass}" onclick="setStars(${id}, ${i}, event)">★</span>`; 
+            }
+            h += '</div>'; return h; 
+        }
+
+        // --- SISTEMA MOODBOARD (GLOBAL Y VINCULACIÓN) ---
+
+        window.toggleMoodboardPanel = function() {
+            const panel = document.getElementById('moodboard-panel');
+            panel.classList.toggle('active');
+            if(panel.classList.contains('active')) renderMoodboard();
+        }
+
+        window.addMoodboardUrl = function() {
+            const input = document.getElementById('mb-url-input');
+            const url = input.value.trim();
+            if(url) {
+                moodboard.push({ id: 'ref-'+Date.now(), url: url });
+                input.value = "";
+                saveState(); renderMoodboard();
+            }
+        }
+
+        window.addMoodboardFile = function(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX = 600; // Escalamos para no petar el localStorage
+                    let w = img.width; let h = img.height;
+                    if(w > h && w > MAX) { h *= MAX / w; w = MAX; }
+                    else if(h > MAX) { w *= MAX / h; h = MAX; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    
+                    moodboard.push({ id: 'ref-'+Date.now(), url: dataUrl });
+                    saveState(); renderMoodboard();
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+            event.target.value = ""; // reset input
+        }
+
+        function renderMoodboard() {
+            const grid = document.getElementById('moodboard-grid');
+            if(moodboard.length === 0) {
+                grid.innerHTML = '<p class="col-span-2 text-center text-xs text-slate-500 italic mt-6">Tu Moodboard está vacío.</p>';
+                return;
+            }
+            grid.innerHTML = moodboard.map(ref => `
+                <div class="relative group rounded-xl overflow-hidden aspect-square border border-slate-700 shadow-sm">
+                    <img src="${ref.url}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button onclick="deleteMoodboardRef('${ref.id}')" class="bg-rose-600 text-white p-2 rounded-lg text-xs hover:bg-rose-500">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.deleteMoodboardRef = function(refId) {
+            if(confirm("¿Eliminar esta referencia del Moodboard global? Se quitará de todos los planos y secuencias donde esté vinculada.")) {
+                moodboard = moodboard.filter(r => r.id !== refId);
+                sections.forEach(s => {
+                    if(s.references) s.references = s.references.filter(r => r !== refId);
+                    if(s.tasks) {
+                        s.tasks.forEach(t => {
+                            if(t.references) t.references = t.references.filter(r => r !== refId);
+                        });
+                    }
+                });
+                saveState(); renderMoodboard();
+                if(currentEditingTaskId) showTaskModal(currentEditingTaskId);
+                renderSections();
+            }
+        }
+
+        // --- SELECTOR DE REFERENCIAS PARA ASIGNAR ---
+        window.openRefPicker = function(type, id) {
+            currentRefTarget = { type: type, id: id || currentEditingTaskId };
+            const overlay = document.getElementById('ref-picker-overlay');
+            const grid = document.getElementById('ref-picker-grid');
+            
+            if(moodboard.length === 0) {
+                grid.innerHTML = '<p class="col-span-3 md:col-span-4 text-center text-slate-400 italic">No hay imágenes en el Moodboard global. Añádelas desde la barra lateral izquierda.</p>';
+            } else {
+                grid.innerHTML = moodboard.map(ref => `
+                    <div class="relative group rounded-xl overflow-hidden aspect-square border-2 border-transparent hover:border-fuchsia-500 cursor-pointer transition-all" onclick="attachReference('${ref.id}')">
+                        <img src="${ref.url}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-fuchsia-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span class="text-white font-bold text-xs bg-fuchsia-600 px-3 py-1 rounded-full">Vincular</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            overlay.style.display = 'flex';
+        }
+
+        window.closeRefPicker = function(e) { 
+            if(e && e.target.id !== 'ref-picker-overlay') return;
+            document.getElementById('ref-picker-overlay').style.display = 'none'; 
+        }
+
+        window.attachReference = function(refId) {
+            if (currentRefTarget.type === 'task') {
+                const t = findTaskById(currentRefTarget.id);
+                if(t) {
+                    if(!t.references) t.references = [];
+                    if(!t.references.includes(refId)) t.references.push(refId);
+                }
+            } else if (currentRefTarget.type === 'sec') {
+                const s = sections.find(sec => sec.id === currentRefTarget.id);
+                if(s) {
+                    if(!s.references) s.references = [];
+                    if(!s.references.includes(refId)) s.references.push(refId);
+                }
+            }
+            saveState();
+            closeRefPicker();
+            
+            if (currentRefTarget.type === 'task') renderTaskReferences(findTaskById(currentRefTarget.id));
+            else renderSections();
+        }
+
+        window.removeReference = function(type, id, refId) {
+            if(type === 'task') {
+                const t = findTaskById(id);
+                if(t && t.references) t.references = t.references.filter(r => r !== refId);
+                saveState();
+                renderTaskReferences(t);
+            } else if (type === 'sec') {
+                const s = sections.find(sec => sec.id === id);
+                if(s && s.references) s.references = s.references.filter(r => r !== refId);
+                saveState();
+                renderSections();
+            }
+        }
+
+        // --- PODIO Y PLAN DE RODAJE ---
+        function renderPriorityHub() {
+            const podiumContainer = document.getElementById('priority-podium');
+            const empty = document.getElementById('priority-empty-msg');
+            if (!podiumContainer) return;
+            podiumContainer.innerHTML = '';
+
+            let active = (priorityOrder || []).map(id => findTaskById(id)).filter(t => t && !completedTasks.includes(t.id));
+            active.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+            
+            if (active.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                const top3 = active.slice(0, 3);
+                
+                top3.forEach((t, i) => {
+                    const div = document.createElement('div');
+                    div.className = `podium-card podium-rank-${i} group`;
+                    div.draggable = true;
+                    div.ondragstart = (e) => handleDragStart(e, t.id);
+                    div.ondragend = handleDragEnd;
+                    div.onclick = () => showTaskModal(t.id);
+
+                    div.innerHTML = `
+                        <div class="podium-medal">${i === 0 ? '🎬' : (i===1 ? '🎥' : '🎞️')}</div>
+                        <div class="flex justify-between items-start mb-2 mt-2">
+                            <span class="text-3xl">${t.sectionIcon}</span>
+                            <button onclick="removeFromPriority(${t.id}, event)" class="text-slate-500 hover:text-rose-500 transition-colors">✕</button>
+                        </div>
+                        <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">${t.sectionTitle}</span>
+                        <h4 class="font-bold text-white text-base leading-tight mt-1 mb-3">${t.text}</h4>
+                        <p class="text-[10px] text-slate-400 mb-4 italic truncate">${t.camera || 'Sin cámara'} | ${t.lens || 'Sin óptica'}</p>
+                        <div class="mt-auto flex items-center justify-between border-t border-slate-700 pt-3">
+                            ${renderStars(t.id, t.stars)}
+                            <input type="checkbox" class="checkbox-eonesia scale-110" onchange="toggleTask(${t.id}, event)" onclick="event.stopPropagation()">
+                        </div>
+                    `;
+                    podiumContainer.appendChild(div);
+                });
+            }
+        }
+
+        window.removeFromPriority = function(id, e) {
+            if (e) e.stopPropagation();
+            priorityOrder = priorityOrder.filter(p => p !== id);
+            saveState(); renderPriorityHub(); 
+        }
+
+        window.moveToPriority = function(id, e) {
+            if (e) e.stopPropagation();
+            if (!priorityOrder.includes(id)) { priorityOrder.push(id); saveState(); renderPriorityHub(); }
+        }
+
+        // --- SECUENCIAS Y PLANOS ---
+        function renderSections() { 
+            const container = document.getElementById('task-container'); if (!container) return; 
+            container.innerHTML = ''; 
+            const sorted = [...sections].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); 
+            sorted.forEach(s => { 
+                const wrapper = document.createElement('div'); wrapper.id = `section-container-${s.id}`; 
+                wrapper.ondragover = handleDragOver; wrapper.ondrop = (e) => handleDropToSpecificSection(e, s.id); 
+                container.appendChild(wrapper); renderSingleSection(s.id); 
+            }); 
+        }
+
+        function renderSingleSection(id) {
+            const container = document.getElementById(`section-container-${id}`); const section = sections.find(sec => sec.id === id); 
+            if (!container || !section) return;
+            
+            container.className = `glass-panel rounded-[2rem] p-6 relative group transition-all duration-500 ${section.pinned ? 'border-emerald-500/50' : ''}`;
+            
+            // Ordenación automática por nivel de estrellas (Calidad para montaje)
+            const tasks = section.tasks || []; 
+            tasks.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+            
+            const activeTasks = tasks.filter(t => !completedTasks.includes(t.id));
+            const filtered = searchTerm ? activeTasks.filter(t => t.text.toLowerCase().includes(searchTerm)) : activeTasks;
+            
+            let htmlTasks = filtered.map(t => `
+                <div class="task-item flex items-center justify-between gap-3 p-3 rounded-xl border border-transparent hover:border-emerald-500/30" draggable="true" ondragstart="handleDragStart(event, ${t.id})" ondragend="handleDragEnd(event)" onclick="showTaskModal(${t.id})">
+                    <div class="flex items-center gap-3 flex-1 overflow-hidden">
+                        <input type="checkbox" class="checkbox-eonesia" onchange="toggleTask(${t.id}, event)" onclick="event.stopPropagation()">
+                        <div class="truncate">
+                            <span class="font-bold text-xs text-white block truncate">${t.text}</span>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                ${t.imageUrl ? '<span class="text-[8px] text-emerald-400 font-bold uppercase tracking-widest bg-emerald-900/40 px-2 py-0.5 rounded">🖼️ IA OK</span>' : ''}
+                                ${(t.references && t.references.length > 0) ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase tracking-widest bg-fuchsia-900/40 px-2 py-0.5 rounded">🎨 ${t.references.length} Refs</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="moveToPriority(${t.id}, event)" class="opacity-0 group-hover:opacity-100 text-emerald-500 hover:scale-125 transition-transform">⚡</button>
+                        <button onclick="deleteTaskPermanent(${t.id}, event)" class="opacity-0 group-hover:opacity-100 text-rose-500">✕</button>
+                        ${renderStars(t.id, t.stars)}
+                    </div>
+                </div>`).join('');
+            
+            let seqRefsHtml = (section.references || []).map(refId => {
+                const ref = moodboard.find(r => r.id === refId);
+                if(!ref) return '';
+                return `
+                    <div class="relative group w-8 h-8 rounded-full border-2 border-[#1e293b] overflow-hidden">
+                        <img src="${ref.url}" class="w-full h-full object-cover">
+                        <button onclick="removeReference('sec', '${section.id}', '${refId}')" class="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 text-[8px]" title="Quitar">✕</button>
+                    </div>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between mb-4 gap-2 border-b border-slate-700 pb-3">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-2xl">${section.icon}</span>
+                        <div class="truncate"><h2 class="text-sm font-bold uppercase tracking-tight text-white">${section.title}</h2><span class="text-[8px] font-bold uppercase tracking-widest text-emerald-500">${activeTasks.length} PLANOS</span></div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="flex -space-x-2">${seqRefsHtml}</div>
+                        <button onclick="openRefPicker('sec', '${section.id}')" class="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-600 text-fuchsia-400 flex items-center justify-center hover:bg-slate-700 hover:border-fuchsia-500 z-10 transition-colors shadow-sm" title="Vincular Arte/Color a Secuencia">+</button>
+                        <button onclick="removeSection('${section.id}')" class="text-slate-500 hover:text-rose-500 ml-2">✕</button>
+                    </div>
+                </div>
+                <div class="space-y-1">${htmlTasks}</div>
+                <input type="text" id="in-${section.id}" placeholder="Añadir plano a esta secuencia..." onkeypress="if(event.key==='Enter')addTask('${section.id}')" class="w-full p-3 rounded-xl text-xs mt-3 bg-slate-900 border border-slate-700 text-white outline-none focus:border-emerald-500 transition-colors">
+            `;
+        }
+
+        window.addTask = (sId) => { 
+            const inputEl = document.getElementById(`in-${sId}`); if (!inputEl.value.trim()) return; 
+            const section = sections.find(sec => sec.id === sId); if (!section.tasks) section.tasks = []; 
+            section.tasks.push({ id: generateTaskId(), text: inputEl.value.trim(), stars: 0, notes: "", camera: "", lens: "", prompt: "", imageUrl: "", subtasks: [], references: [] }); 
+            inputEl.value = ''; saveState(); renderSingleSection(sId); 
+        };
+
+        window.addNewSection = () => { 
+            const titleInput = document.getElementById('new-section-title').value; if (!titleInput.trim()) return; 
+            sections.push({ id: generateSecId(), title: titleInput, icon: "🎬", pinned: false, tasks: [], references: [] }); 
+            document.getElementById('new-section-title').value = ''; saveState(); renderSections(); 
+        };
+
+        window.toggleTask = function(id, e) {
+            if (e) e.stopPropagation();
+            if (!completedTasks.includes(id)) { completedTasks.push(id); } 
+            else { completedTasks = completedTasks.filter(t => t !== id); }
+            saveState(); renderAll();
+        }
+
+        window.deleteTaskPermanent = function(id, e) {
+            if (e) e.stopPropagation();
+            if(confirm("¿Eliminar este plano definitivamente?")) {
+                sections.forEach(s => { if (s.tasks) s.tasks = s.tasks.filter(t => parseFloat(t.id) !== parseFloat(id)); });
+                priorityOrder = priorityOrder.filter(p => parseFloat(p) !== parseFloat(id));
+                completedTasks = completedTasks.filter(c => parseFloat(c) !== parseFloat(id));
+                saveState(); renderAll();
+            }
+        }
+        window.removeSection = function(id) { if(confirm("¿Eliminar secuencia completa?")) { sections = sections.filter(s => s.id !== id); saveState(); renderSections(); } };
+        
+        window.setStars = function(id, count, e) { 
+            if (e) e.stopPropagation(); 
+            sections.forEach(s => { 
+                if (s.tasks) { 
+                    const t = s.tasks.find(task => task.id === id); 
+                    if (t) t.stars = (t.stars === count) ? 0 : count; 
+                } 
+            }); 
+            saveState(); 
+            renderAll(); // Al renderizar, el motor ordena automáticamente los planos de mayor a menor calidad
+        }
+
+        // --- DRAG & DROP ---
+        function handleDragStart(e, id) { e.dataTransfer.setData('taskId', id); e.target.classList.add('dragging'); isDragging = true; }
+        function handleDragEnd(e) { e.target.classList.remove('dragging'); isDragging = false; document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target')); }
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drop-target'); }
+        function handleDropToPriority(e) { e.preventDefault(); moveToPriority(parseFloat(e.dataTransfer.getData('taskId')), e); }
+        function handleDropToSpecificSection(e, targetId) { 
+            e.preventDefault(); const taskId = parseFloat(e.dataTransfer.getData('taskId')); let movedTask = null; 
+            sections.forEach(s => { if (s.tasks) { const idx = s.tasks.findIndex(t => parseFloat(t.id) === taskId); if (idx !== -1) movedTask = s.tasks.splice(idx, 1)[0]; } });
+            if (movedTask) { const target = sections.find(s => s.id === targetId); if (target) { if (!target.tasks) target.tasks = []; target.tasks.push(movedTask); } }
+            saveState(); renderAll(); 
+        }
+
+        // --- MODAL Y STORYBOARD ---
+        window.showTaskModal = function(id) { 
+            const t = findTaskById(id); if (!t) return; 
+            currentEditingTaskId = id; 
+            document.getElementById('modal-sec-title').innerText = `${t.sectionIcon} ${t.sectionTitle}`;
+            document.getElementById('modal-task-title').value = t.text;
+            document.getElementById('modal-task-notes').value = t.notes || ""; 
+            document.getElementById('modal-camera').value = t.camera || ""; 
+            document.getElementById('modal-lens').value = t.lens || ""; 
+            document.getElementById('modal-prompt').value = t.prompt || ""; 
+            document.getElementById('modal-image-url').value = t.imageUrl || ""; 
+            
+            updateStoryboardPreview();
+            renderTaskReferences(t);
+            renderSubtasks(t.subtasks || []);
+            document.getElementById('task-modal-overlay').style.display = 'flex';
+        }
+
+        window.hideTaskModal = function() { document.getElementById('task-modal-overlay').style.display = 'none'; currentEditingTaskId = null; }
+        window.closeTaskModal = function(e) { if (e.target.id === 'task-modal-overlay') hideTaskModal(); }
+
+        window.autoSave = function() { 
+            if (!currentEditingTaskId) return; const t = findTaskById(currentEditingTaskId); 
+            if (t) { 
+                t.text = document.getElementById('modal-task-title').value; 
+                t.notes = document.getElementById('modal-task-notes').value; 
+                t.camera = document.getElementById('modal-camera').value; 
+                t.lens = document.getElementById('modal-lens').value; 
+                t.prompt = document.getElementById('modal-prompt').value; 
+                t.imageUrl = document.getElementById('modal-image-url').value; 
+            } 
+            sections.forEach(s => { 
+                if (s.tasks) { 
+                    const idx = s.tasks.findIndex(task => parseFloat(task.id) === currentEditingTaskId); 
+                    if (idx !== -1) { 
+                        s.tasks[idx].text = t.text; s.tasks[idx].notes = t.notes; s.tasks[idx].camera = t.camera; 
+                        s.tasks[idx].lens = t.lens; s.tasks[idx].prompt = t.prompt; s.tasks[idx].imageUrl = t.imageUrl; 
+                    } 
+                } 
+            });
+            saveState(); renderAll(); 
+        }
+
+        function renderTaskReferences(task) {
+            const container = document.getElementById('modal-references-list');
+            if(!task.references || task.references.length === 0) {
+                container.innerHTML = '<span class="text-slate-500 text-xs italic">Sin referencias vinculadas.</span>';
+                return;
+            }
+            container.innerHTML = task.references.map(refId => {
+                const ref = moodboard.find(r => r.id === refId);
+                if(!ref) return '';
+                return `
+                    <div class="relative group flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-slate-600 shadow-md">
+                        <img src="${ref.url}" class="w-full h-full object-cover">
+                        <button onclick="removeReference('task', ${task.id}, '${refId}')" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 text-[8px] transition-opacity" title="Desvincular">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.updateStoryboardPreview = function() {
+            const url = document.getElementById('modal-image-url').value.trim();
+            const img = document.getElementById('storyboard-img');
+            const placeholder = document.getElementById('storyboard-placeholder');
+            
+            if (url) {
+                img.src = url; img.classList.remove('hidden'); placeholder.classList.add('hidden');
+            } else {
+                img.src = ""; img.classList.add('hidden'); placeholder.classList.remove('hidden');
+            }
+        }
+
+        window.simulateAIGeneration = function() {
+            const prompt = document.getElementById('modal-prompt').value.trim();
+            if(!prompt) { alert("Introduce un prompt para generar el storyboard."); return; }
+            
+            const loading = document.getElementById('storyboard-loading');
+            loading.classList.remove('hidden');
+            
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                const mockUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + " cinematic documentary shot movie still 4k")}?width=800&height=450&nologo=true`;
+                document.getElementById('modal-image-url').value = mockUrl;
+                updateStoryboardPreview();
+                autoSave();
+            }, 1500);
+        }
+
+        function renderSubtasks(subs) { 
+            const list = document.getElementById('subtasks-list'); if (!list) return; 
+            list.innerHTML = (subs || []).map((s, i) => `
+                <div class="flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <input type="checkbox" class="checkbox-eonesia !w-4 !h-4 !rounded" ${s.completed ? 'checked' : ''} onchange="toggleSubtask(${i})">
+                    <span class="text-[11px] font-bold flex-1 ${s.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${s.text}</span>
+                    <button onclick="removeSubtask(${i})" class="text-slate-500 hover:text-rose-500">✕</button>
+                </div>
+            `).join(''); 
+        }
+
+        window.addSubtask = function() { 
+            const input = document.getElementById('new-subtask-input'); const text = input.value.trim(); if (!text || !currentEditingTaskId) return; 
+            sections.forEach(s => { const t = s.tasks.find(task => parseFloat(task.id) === currentEditingTaskId); if (t) { if (!t.subtasks) t.subtasks = []; t.subtasks.push({ text, completed: false }); renderSubtasks(t.subtasks); } }); 
+            input.value = ""; autoSave(); 
+        }
+        window.toggleSubtask = function(idx) { sections.forEach(s => { const t = s.tasks.find(task => parseFloat(task.id) === currentEditingTaskId); if (t && t.subtasks) { t.subtasks[idx].completed = !t.subtasks[idx].completed; renderSubtasks(t.subtasks); } }); autoSave(); }
+        window.removeSubtask = function(idx) { sections.forEach(s => { const t = s.tasks.find(task => parseFloat(task.id) === currentEditingTaskId); if (t && t.subtasks) { t.subtasks.splice(idx, 1); renderSubtasks(t.subtasks); } }); autoSave(); }
+
+        // --- EXPORTAR E IMPORTAR ---
+        window.exportProject = function() {
+            const data = { sections, completedTasks, priorityOrder, moodboard }; 
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); 
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+            a.download = `Rodaje_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); 
+        }
+        window.importProject = function(event) {
+            const file = event.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(d.sections) { 
+                        sections = d.sections; 
+                        completedTasks = d.completedTasks || []; 
+                        priorityOrder = d.priorityOrder || []; 
+                        moodboard = d.moodboard || [];
+                        saveState(); renderAll(); renderMoodboard(); alert("Proyecto de rodaje cargado."); 
+                    }
+                } catch(err) { alert("Error al leer el archivo JSON."); }
+            };
+            reader.readAsText(file);
+        }
+
+        window.handleSearch = () => { searchTerm = document.getElementById('global-search').value.toLowerCase(); renderAll(); };
+        
+        function renderAll() { renderPriorityHub(); renderSections(); updateProgress(); }
+        
+        window.onload = function() { renderAll(); renderMoodboard(); };
+    </script>
+</body>
+</html>
